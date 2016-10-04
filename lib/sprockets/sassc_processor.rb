@@ -22,17 +22,11 @@ module Sprockets
       options = engine_options(input, context)
       engine = Autoload::SassC::Engine.new(input[:data], options)
 
-      data = Utils.module_include(Autoload::SassC::Script::Functions, @functions) do
+      css = Utils.module_include(Autoload::SassC::Script::Functions, @functions) do
         engine.render
       end
 
-      match_data = data.match(/(.*)\n\/\*# sourceMappingURL=data:application\/json;base64,(.+) \*\//m)
-      css, map = match_data[1], Base64.decode64(match_data[2])
-
-      map = SourceMapUtils.combine_source_maps(
-        input[:metadata][:map],
-        change_source(SourceMapUtils.decode_json_source_map(map)["mappings"], input[:source_path])
-      )
+      map = SourceMapUtils.decode_json_source_map(engine.source_map)["mappings"]
 
       engine.dependencies.each do |dependency|
         context.metadata[:dependencies] << URIUtils.build_file_digest_uri(dependency.filename)
@@ -43,18 +37,15 @@ module Sprockets
 
     private
 
-    def change_source(mappings, source)
-      mappings.each { |m| m[:source] = source }
-    end
-
     def engine_options(input, context)
       merge_options({
         filename: input[:filename],
         syntax: self.class.syntax,
         load_paths: input[:environment].paths,
         importer: @importer_class,
-        source_map_embed: true,
-        source_map_file: '.',
+        source_map_contents: true,
+        source_map_file: "#{input[:filename]}.map",
+        omit_source_map_url: true,
         sprockets: {
           context: context,
           environment: input[:environment],
