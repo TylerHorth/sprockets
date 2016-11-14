@@ -105,18 +105,8 @@ module Sprockets
     #
     # Returns buf String.
     def concat_javascript_sources(buf, source)
-      if source.bytesize > 0
-        idx = semicolon_insertion_location(source)
-
-        unless idx.nil?
-          source = source.dup
-          source.insert(idx, ';')
-        end
-
-        buf << source
-      end
-
-      buf
+      buf << 0x0A if buf.bytesize > 0 && buf.getbyte(-1) != 0x0A
+      buf << source
     end
 
     # Internal: Inject into target module for the duration of the block.
